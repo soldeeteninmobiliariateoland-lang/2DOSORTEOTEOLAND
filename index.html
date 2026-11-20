@@ -168,11 +168,21 @@ section{padding:64px 0}
 
 .since{margin-top:14px;display:inline-block;background:rgba(232,182,74,.14);border:1px solid rgba(232,182,74,.5);color:#fff;border-radius:12px;padding:8px 14px;font-size:15px}
 .since b{color:var(--gold)}
-.music{position:fixed;right:16px;bottom:16px;z-index:50;display:flex;align-items:center;gap:8px;background:var(--night);color:#fff;border:2px solid var(--gold);border-radius:999px;padding:10px 16px;font:600 14px var(--body);cursor:pointer;box-shadow:0 8px 22px rgba(0,0,0,.3)}
-.music .ic{font-size:16px}
-.music.on .ic{animation:bob 1s ease-in-out infinite}
-@keyframes bob{50%{transform:translateY(-3px)}}
-@media (prefers-reduced-motion:reduce){.music.on .ic{animation:none}}
+.music{position:fixed;right:16px;bottom:16px;z-index:50;display:flex;align-items:center;gap:12px;padding:8px 18px 8px 8px;border-radius:999px;border:1px solid rgba(232,182,74,.55);background:linear-gradient(135deg,#123b2f,#0b2a21);color:#fff;font-family:var(--body);text-align:left;cursor:pointer;box-shadow:0 10px 28px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.08)}
+.music:hover{filter:brightness(1.08)}
+.music .disc{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 30%,#fff3c4,#e8b64a 55%,#b8821e);box-shadow:0 0 0 3px rgba(232,182,74,.25)}
+.music .disc svg{width:22px;height:22px}
+.music .eq{display:none;align-items:flex-end;gap:3px;height:18px}
+.music .eq i{width:4px;border-radius:2px;background:#0b3d2a;animation:eq 0.9s ease-in-out infinite}
+.music .eq i:nth-child(2){animation-delay:.2s}.music .eq i:nth-child(3){animation-delay:.4s}
+@keyframes eq{0%,100%{height:5px}50%{height:18px}}
+.music.on .eq{display:flex}.music.on .play{display:none}
+.music .lbl{display:flex;flex-direction:column;line-height:1.2}
+.music .lbl b{font-size:14px;font-weight:600}
+.music .lbl small{font-size:12px;color:#cfe3d9}
+.music.err .lbl small{color:#ffb4a8}
+@media (prefers-reduced-motion:reduce){.music .eq i{animation:none;height:12px}}
+@media (max-width:440px){.music{right:10px;bottom:10px;padding:6px 14px 6px 6px}.music .disc{width:38px;height:38px}}
 footer{padding:40px 0 48px;font-size:13px;color:var(--muted)}
 .foot{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:24px}
 .foot b{color:var(--ink)}
@@ -420,8 +430,11 @@ footer{padding:40px 0 48px;font-size:13px;color:var(--muted)}
   </div>
 </footer>
 
-<audio id="bgm" src="musica-navidad.mp3" loop preload="none"></audio>
-<button class="music" id="musicBtn" type="button" aria-pressed="false"><span class="ic">🎵</span><span id="musicTxt">Activar música navideña</span></button>
+<audio id="bgm" src="musica-navidad.mp3" loop preload="auto"></audio>
+<button class="music" id="musicBtn" type="button" aria-pressed="false" aria-label="Jingle Bells">
+  <span class="disc"><svg class="play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="#0b3d2a"/></svg><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span></span>
+  <span class="lbl"><b>Jingle Bells</b><small id="musicTxt">Toque para escuchar</small></span>
+</button>
 
 <script>
 // Cuenta regresiva al inicio del live: sábado 19/12/2026, 11:00 a.m. hora de Perú (UTC-5)
@@ -522,8 +535,9 @@ var CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRz01XSaFBiXPCQrS
   var a=document.getElementById("bgm"), b=document.getElementById("musicBtn"), t=document.getElementById("musicTxt");
   a.volume=0.4;
   var off=false; try{ off=localStorage.getItem("teolandMusica")==="off"; }catch(e){}
-  function ui(on){ b.classList.toggle("on",on); b.setAttribute("aria-pressed",on?"true":"false"); t.textContent=on?"Pausar música":"Activar música navideña"; }
-  function play(){ var pr=a.play(); if(pr&&pr.then){ pr.then(function(){ui(true);}).catch(function(){ui(false);}); } else ui(true); }
+  function ui(on){ b.classList.toggle("on",on); b.classList.remove("err"); b.setAttribute("aria-pressed",on?"true":"false"); t.textContent=on?"Sonando · toque para pausar":"Toque para escuchar"; }
+  a.addEventListener("error",function(){ b.classList.remove("on"); b.classList.add("err"); t.textContent="No se pudo cargar la canción"; });
+  function play(){ t.textContent="Cargando…"; var pr=a.play(); if(pr&&pr.then){ pr.then(function(){ui(true);}).catch(function(err){ if(a.error){ b.classList.add("err"); t.textContent="No se pudo cargar la canción"; } else ui(false); }); } else ui(true); }
   b.addEventListener("click",function(e){
     e.stopPropagation();
     if(a.paused){ off=false; try{localStorage.setItem("teolandMusica","on");}catch(_){} play(); }
@@ -531,6 +545,8 @@ var CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRz01XSaFBiXPCQrS
   });
   function first(ev){ if(ev && ev.target && b.contains(ev.target)) return; document.removeEventListener("pointerdown",first); document.removeEventListener("keydown",first); if(!off && a.paused) play(); }
   document.addEventListener("pointerdown",first); document.addEventListener("keydown",first);
+  // Intentar sonar apenas abre la página; si el navegador lo bloquea, suena con el primer toque
+  window.addEventListener("load",function(){ if(off) return; var pr=a.play(); if(pr&&pr.then){ pr.then(function(){ui(true);}).catch(function(){ if(!a.error) t.textContent="Toque la pantalla para escuchar"; }); } });
 })();
 </script>
 </body>
